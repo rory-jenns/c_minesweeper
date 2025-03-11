@@ -21,11 +21,17 @@ int is_mine(int** board, int x, int y) {
 }
 
 void print_board(int** board, int** covered) {
-    printf("              COLUMNS\n");
+    printf("\033[2J");  // ANSI escape sequence. Clear Screen and return to 0,0
+    printf("               COLUMNS\n");
     printf("       |"); for(int x=0; x<WIDTH;x++) {printf(" %d", x);} printf(" |\n");
-    printf("ROWS --|"); for(int x=0; x<WIDTH;x++) {printf("--");} printf("-|\n");
+    printf("     --|"); for(int x=0; x<WIDTH;x++) {printf("--");} printf("-|\n");
     for (int y=0; y<HEIGHT; y++) {
-        printf("     %d | ", y);
+        if (y+1 == HEIGHT / 2) {
+            printf("ROWS %d | ", y);
+        }
+        else {
+            printf("     %d | ", y);
+        }
         for (int x=0; x<WIDTH;x++) {
             if (covered[y][x] == FLAG) {printf("F");}  // square flagged!
             else if (covered[y][x]) {printf("#");}  // cover the square
@@ -97,6 +103,21 @@ int sweep(int** board, int** covered, int x, int y){
     return board[y][x];
 }
 
+int check_win(int** covered) {
+    int x, y, count;
+    for (x=0;x<WIDTH;x++){
+        for(y=0;y<HEIGHT;y++){
+            if (covered[y][x]) {
+                count++;
+                if (count > NUM_MINES) {
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
+}
+
 int main(void) {
     int** board;
     int** covered;
@@ -152,13 +173,12 @@ int main(void) {
     }
 
     // Play Loop
-    int in_play = 1, input_valid = 0, hit;
+    int in_play = 1, lose = 0, win = 0, input_valid = 0, hit;
 
     char action;
     int row, col;
 
     while (in_play) {
-        printf("IN PLAY\n");
         print_board(board, covered);
 
         printf("Available Moves: \n - SWEEP square on column X row Y 'S X Y'\n - FLAG square on column X row Y 'F X Y'\n");
@@ -189,12 +209,31 @@ int main(void) {
             hit = sweep(board, covered, col, row);
         }
 
-        in_play = (hit != MINE);
+        lose = (hit == MINE);
+
+        win = check_win(covered);
+
+        in_play = !lose && !win;
     }
 
-    printf("sorry you hit a mine :/\n");
+    // End of game
+
+    // Display Uncovered game board
+    for (x=0;x<WIDTH;x++){
+        for(y=0;y<HEIGHT;y++){
+            covered[y][x] = 0;
+        }
+    }    
     print_board(board, covered);
 
+    if (lose) {
+        printf("sorry you hit a mine :/\n");
+    }
+    else if (win) {
+        printf("Congratulations! Successfully swept mines\n");
+    }
+
+    // Cross my T's
     for (i=0; i< HEIGHT; i++) {
         free(board[i]);
         free(covered[i]);
